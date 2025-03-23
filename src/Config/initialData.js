@@ -1,23 +1,17 @@
 import bcryptjs from 'bcryptjs';
 import mongoose from 'mongoose';
+
 import User from '../Schemas/userSchema.js';
 import Card from '../Schemas/cardSchema.js';
 
 const createInitialUsers = async () => {
     const users = [
         {
-            name: {
-                first: "Regular",
-                middle: "",
-                last: "User"
-            },
+            name: { first: "Regular", middle: "", last: "User" },
             phone: "050-0000000",
             email: "regular@example.com",
             password: "Aa123456!",
-            image: {
-                url: "",
-                alt: ""
-            },
+            image: { url: "", alt: "" },
             address: {
                 state: "",
                 country: "Israel",
@@ -30,11 +24,7 @@ const createInitialUsers = async () => {
             isAdmin: false
         },
         {
-            name: {
-                first: "Business",
-                middle: "",
-                last: "User"
-            },
+            name: { first: "Business", middle: "", last: "User" },
             phone: "050-0000000",
             email: "business@example.com",
             password: "Aa123456!",
@@ -50,13 +40,8 @@ const createInitialUsers = async () => {
             isBusiness: true,
             isAdmin: false
         },
-        // Admin user צריך להוסיף
         {
-            name: {
-                first: "Admin",
-                middle: "",
-                last: "User"
-            },
+            name: { first: "Admin", middle: "", last: "User" },
             phone: "050-0000000",
             email: "admin@example.com",
             password: "Aa123456!",
@@ -75,20 +60,31 @@ const createInitialUsers = async () => {
     ];
 
     for (const userData of users) {
-        const exists = await User.findOne({ email: userData.email });
-        if (!exists) {
-            const salt = await bcryptjs.genSalt(10);
-            userData.password = await bcryptjs.hash(userData.password, salt);
-            await new User(userData).save();
+        try {
+            const exists = await User.findOne({ email: userData.email });
+            if (!exists) {
+                const salt = await bcryptjs.genSalt(10);
+                userData.password = await bcryptjs.hash(userData.password, salt);
+                await new User(userData).save();
+                console.log(`Created user: ${userData.email}`);
+            } else {
+                console.log(`User already exists: ${userData.email}`);
+            }
+        } catch (error) {
+            console.error(`Error creating user ${userData.email}:`, error.message);
         }
     }
 
-    return await User.findOne({ isBusiness: true });
+    // ודא שקיים משתמש עסקי - אם לא, זרוק שגיאה ברורה
+    const businessUser = await User.findOne({ isBusiness: true });
+    if (!businessUser) {
+        throw new Error('No business user found. Please check the user data.');
+    }
+    return businessUser;
 };
 
 const createInitialCards = async (businessUserId) => {
     const cards = [
-        // First card
         {
             title: "First Business Card",
             subtitle: "Electronics Store",
@@ -114,7 +110,6 @@ const createInitialCards = async (businessUserId) => {
             likes: [],
             user_id: businessUserId
         },
-        // Second card
         {
             title: "Second Business Card",
             subtitle: "Restaurant",
@@ -140,7 +135,6 @@ const createInitialCards = async (businessUserId) => {
             likes: [],
             user_id: businessUserId
         },
-        // Third card
         {
             title: "third card",
             subtitle: "this is the third card",
@@ -169,9 +163,16 @@ const createInitialCards = async (businessUserId) => {
     ];
 
     for (const cardData of cards) {
-        const exists = await Card.findOne({ bizNumber: cardData.bizNumber });
-        if (!exists) {
-            await new Card(cardData).save();
+        try {
+            const exists = await Card.findOne({ bizNumber: cardData.bizNumber });
+            if (!exists) {
+                await new Card(cardData).save();
+                console.log(`Created card with bizNumber: ${cardData.bizNumber}`);
+            } else {
+                console.log(`Card already exists with bizNumber: ${cardData.bizNumber}`);
+            }
+        } catch (error) {
+            console.error(`Error creating card with bizNumber ${cardData.bizNumber}:`, error.message);
         }
     }
 };

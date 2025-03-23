@@ -1,7 +1,9 @@
 import Card from '../Schemas/cardSchema.js';
-import { formatCardResponse } from './cardUtils.js';
+import { formatCardResponse } from '../Utils/cardUtils.js';
+import { generateUniqueBizNumber } from '../Services/bizNumberService.js';
 
-const getAllCards = async (req, res) => {
+// Get all cards
+export const getAllCards = async (req, res) => {
     try {
         const cards = await Card.find().lean();
         if (!cards.length) return res.status(404).json({ message: "No cards found" });
@@ -11,7 +13,8 @@ const getAllCards = async (req, res) => {
     }
 };
 
-const getUserCards = async (req, res) => {
+// Get cards belonging to the authenticated user
+export const getUserCards = async (req, res) => {
     try {
         const cards = await Card.find({ user_id: req.user._id });
         res.json(cards.map(formatCardResponse));
@@ -20,7 +23,8 @@ const getUserCards = async (req, res) => {
     }
 };
 
-const getCardById = async (req, res) => {
+// Get a card by ID
+export const getCardById = async (req, res) => {
     try {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).json({ error: 'Card not found' });
@@ -30,7 +34,8 @@ const getCardById = async (req, res) => {
     }
 };
 
-const createCard = async (req, res) => {
+// Create a new card
+export const createCard = async (req, res) => {
     try {
         const bizNumber = await generateUniqueBizNumber();
         const newCard = await new Card({ ...req.body, user_id: req.user._id, bizNumber }).save();
@@ -39,5 +44,3 @@ const createCard = async (req, res) => {
         res.status(400).json({ error: error.message });
     }
 };
-
-export { getAllCards, getUserCards, getCardById, createCard };

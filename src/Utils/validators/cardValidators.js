@@ -1,4 +1,5 @@
-import * as Joi from 'joi';
+import Joi from 'joi';
+
 
 const addressSchema = Joi.object({
     state: Joi.string().allow(''),
@@ -70,8 +71,8 @@ const validateCard = (card) => {
         }),
         image: imageSchema,
         address: addressSchema,
-        bizNumber: Joi.string().allow(''),  // Will be generated server-side
-        user_id: Joi.string().allow('')     // Will be set from token
+        bizNumber: Joi.string().allow(''),
+        user_id: Joi.string().allow('')
     });
 
     return schema.validate(card, { abortEarly: false });
@@ -120,18 +121,13 @@ const validateCardUpdate = (card) => {
 
 const validateBizNumber = (bizNumber) => {
     const schema = Joi.object({
-        bizNumber: Joi.number()
-            .min(1000000)
-            .max(9999999)
-            .required()
-            .messages({
-                'number.min': 'Business number must be at least 1,000,000',
-                'number.max': 'Business number cannot exceed 9,999,999',
-                'any.required': 'Business number is required',
-                'number.base': 'Business number must be a number'
-            })
+        bizNumber: Joi.number().min(1000000).max(9999999).required().messages({
+            'number.min': 'Business number must be at least 1,000,000',
+            'number.max': 'Business number cannot exceed 9,999,999',
+            'any.required': 'Business number is required',
+            'number.base': 'Business number must be a number'
+        })
     });
-
     return schema.validate({ bizNumber });
 };
 

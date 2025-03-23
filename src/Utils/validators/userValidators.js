@@ -1,4 +1,5 @@
-import * as Joi from 'joi';
+import Joi from 'joi';
+
 
 const addressSchema = Joi.object({
     state: Joi.string().allow(''),
@@ -45,27 +46,21 @@ const validateUser = (user) => {
                 'any.required': 'Last name is required'
             })
         }).required(),
-        phone: Joi.string()
-            .pattern(/^0\d{1,2}\-?\d{7}$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Phone number must be a valid Israeli phone number (e.g., 050-1234567)',
-                'any.required': 'Phone number is required',
-                'string.empty': 'Phone number cannot be empty'
-            }),
+        phone: Joi.string().pattern(/^0\d{1,2}\-?\d{7}$/).required().messages({
+            'string.pattern.base': 'Phone number must be a valid Israeli phone number (e.g., 050-1234567)',
+            'any.required': 'Phone number is required',
+            'string.empty': 'Phone number cannot be empty'
+        }),
         email: Joi.string().email().required().messages({
             'string.email': 'Email must be a valid email address',
             'any.required': 'Email is required',
             'string.empty': 'Email cannot be empty'
         }),
-        password: Joi.string()
-            .pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*-])[A-Za-z\d!@#$%^&*-]{6,}$/)
-            .required()
-            .messages({
-                'string.pattern.base': 'Password must contain: at least 6 characters, one uppercase letter, one lowercase letter, one number and one special character (!@#$%^&*-)',
-                'any.required': 'Password is required',
-                'string.empty': 'Password cannot be empty'
-            }),
+        password: Joi.string().pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*-])[A-Za-z\d!@#$%^&*-]{6,}$/).required().messages({
+            'string.pattern.base': 'Password must contain: at least 6 characters, one uppercase letter, one lowercase letter, one number and one special character (!@#$%^&*-)',
+            'any.required': 'Password is required',
+            'string.empty': 'Password cannot be empty'
+        }),
         image: imageSchema,
         address: addressSchema,
         isBusiness: Joi.boolean().default(false),

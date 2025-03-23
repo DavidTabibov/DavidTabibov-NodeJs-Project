@@ -1,27 +1,30 @@
-import { genSalt, hash, compare } from 'bcryptjs';
-import User, { findOne } from '../Schemas/userSchema';
-import { generateAuthToken } from '../Services/tokenService';
-import { isBlocked as _isBlocked, getBlockTimeRemaining, addFailedAttempt, getRemainingAttempts, resetAttempts } from '../Services/loginAttemptsService';
-import { validateUser, validateLogin } from '../validators/userValidators';
-
+import pkg from 'bcryptjs';
+const { genSalt, hash, compare } = pkg;
+import User from '../Schemas/userSchema.js';
+import { generateAuthToken } from '../Services/tokenService.js';
+import { isBlocked, getBlockTimeRemaining, addFailedAttempt, getRemainingAttempts, resetAttempts } from '../Services/loginAttemptsService.js';
+import { validateUser, validateLogin } from '../Utils/validators/userValidators.js';
 
 // Handle user registration
-const registerUser = async (req, res) => {
+export const registerUser = async (req, res) => {
     try {
+        console.log("Received registration request with body:", req.body);
+
         // Validate request body
         const { error } = validateUser(req.body);
         if (error) {
-            return res.status(400).json({
-                error: error.details[0].message
-            });
+            console.log("Validation error:", error.details[0].message);
+            return res.status(400).json({ error: error.details[0].message });
         }
+        console.log("Validation passed.");
+
         // Check if user already exists
-        let existingUser = await findOne({ email: req.body.email });
+        const existingUser = await User.findOne({ email: req.body.email });
         if (existingUser) {
-            return res.status(400).json({
-                error: 'User with this email already exists'
-            });
+            console.log("User already exists:", req.body.email);
+            return res.status(400).json({ error: 'User with this email already exists' });
         }
+        console.log("User does not exist. Creating new user.");
 
         // Create new user object
         const user = new User({
@@ -32,20 +35,29 @@ const registerUser = async (req, res) => {
             image: req.body.image,
             address: req.body.address,
             isBusiness: req.body.isBusiness || false,
-            isAdmin: false // Default value, can only be set manually in DB
+            isAdmin: false // Only manually set in DB
         });
 
         // Hash password
-        const salt = await genSalt(10);
+        console.time("bcryptTime");
+        const salt = await genSalt(5); // הורדנו מ-10 ל-5 לבדיקה
+        console.log("Salt generated.");
         user.password = await hash(user.password, salt);
+        console.timeEnd("bcryptTime");
+        console.log("Password hashed.");
 
         // Save user
+        console.time("saveTime");
         await user.save();
+        console.timeEnd("saveTime");
+        console.log("User saved.");
 
-        // Generate token using the tokenService
+        // Generate token
+        console.time("tokenTime");
         const token = generateAuthToken(user);
+        console.timeEnd("tokenTime");
+        console.log("Token generated.");
 
-        // Return response
         res.status(201).json({
             token,
             _id: user._id,
@@ -54,66 +66,66 @@ const registerUser = async (req, res) => {
             isBusiness: user.isBusiness
         });
     } catch (error) {
-        res.status(500).json({
-            error: 'Internal Server Error',
-            message: error.message
-        });
+        console.error("Error in registerUser:", error);
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 };
 
 // Handle user login
-const loginUser = async (req, res) => {
+export const loginUser = async (req, res) => {
     try {
+        console.log("Received login request with body:", req.body);
+
         // Validate request body
         const { error } = validateLogin(req.body);
         if (error) {
-            return res.status(400).json({
-                error: error.details[0].message
-            });
+            console.log("Validation error:", error.details[0].message);
+            return res.status(400).json({ error: error.details[0].message });
         }
 
         const { email, password } = req.body;
+        console.log("Checking if user is blocked for email:", email);
 
         // Check if user is blocked
-        if (_isBlocked(email)) {
+        if (isBlocked(email)) {
             const hoursRemaining = getBlockTimeRemaining(email);
-            return res.status(403).json({
-                error: `Account is temporarily blocked. Try again in ${hoursRemaining} hours.`
-            });
+            console.log("User is blocked for", hoursRemaining, "hours.");
+            return res.status(403).json({ error: `Account is temporarily blocked. Try again in ${hoursRemaining} hours.` });
         }
 
+        console.log("Finding user by email...");
         // Find user by email
-        const user = await findOne({ email });
+        const user = await User.findOne({ email });
         if (!user) {
+            console.log("User not found.");
             addFailedAttempt(email);
             const remainingAttempts = getRemainingAttempts(email);
-            return res.status(401).json({
-                error: `Invalid email or password. ${remainingAttempts} attempts remaining.`
-            });
+            return res.status(401).json({ error: `Invalid email or password. ${remainingAttempts} attempts remaining.` });
         }
 
+        console.log("User found. Verifying password...");
         // Verify password
         const validPassword = await compare(password, user.password);
         if (!validPassword) {
-            const isBlocked = addFailedAttempt(email);
-            if (isBlocked) {
-                return res.status(403).json({
-                    error: 'Account has been blocked for 24 hours due to multiple failed login attempts.'
-                });
+            console.log("Password invalid.");
+            const blocked = addFailedAttempt(email);
+            if (blocked) {
+                console.log("User is now blocked due to too many failed attempts.");
+                return res.status(403).json({ error: 'Account has been blocked for 24 hours due to multiple failed login attempts.' });
             }
             const remainingAttempts = getRemainingAttempts(email);
-            return res.status(401).json({
-                error: `Invalid email or password. ${remainingAttempts} attempts remaining.`
-            });
+            return res.status(401).json({ error: `Invalid email or password. ${remainingAttempts} attempts remaining.` });
         }
 
+        console.log("Password valid. Resetting attempts...");
         // Reset failed attempts on successful login
         resetAttempts(email);
 
-        // Generate token using the tokenService
+        console.log("Generating token...");
+        // Generate token
         const token = generateAuthToken(user);
+        console.log("Token generated. Login successful.");
 
-        // Return response
         res.json({
             token,
             _id: user._id,
@@ -123,14 +135,7 @@ const loginUser = async (req, res) => {
             isAdmin: user.isAdmin
         });
     } catch (error) {
-        res.status(500).json({
-            error: 'Internal Server Error',
-            message: error.message
-        });
+        console.error("Error in loginUser:", error);
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
-};
-
-export default {
-    registerUser,
-    loginUser
 };

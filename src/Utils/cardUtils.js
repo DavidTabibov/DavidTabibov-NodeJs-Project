@@ -1,5 +1,5 @@
-const formatCardResponse = (card) => ({
-    _id: card._id,   //  Ensure `_id` comes first
+export const formatCardResponse = (card) => ({
+    _id: card._id,
     title: card.title,
     subtitle: card.subtitle,
     description: card.description,
@@ -11,8 +11,6 @@ const formatCardResponse = (card) => ({
     user_id: card.user_id,
     createdAt: card.createdAt,
     __v: card.__v,
-
-    //  Move `image` and `address` to the bottom
     address: {
         _id: card.address?._id,
         state: card.address?.state || "",
@@ -29,4 +27,14 @@ const formatCardResponse = (card) => ({
     }
 });
 
-export { formatCardResponse };
+// Validation function for updating card fields
+export const validateUpdate = (data) => {
+    const allowedFields = {};
+    if (data.title) allowedFields.title = data.title;
+    if (data.subtitle) allowedFields.subtitle = data.subtitle;
+    if (data.description) allowedFields.description = data.description;
+    if (data.phone) allowedFields.phone = data.phone;
+    if (data.email) allowedFields.email = data.email;
+    if (data.web) allowedFields.web = data.web;
+    return { error: null, allowedFields };
+};

@@ -1,7 +1,6 @@
 import jwt from 'jsonwebtoken';
 
-const generateAuthToken = (user) => {
-    // Create token with required fields from PDF: _id, isBusiness, isAdmin
+export const generateAuthToken = (user) => {
     const token = jwt.sign(
         {
             _id: user._id,
@@ -14,13 +13,10 @@ const generateAuthToken = (user) => {
     return token;
 };
 
-const verifyToken = (token) => {
+export const verifyToken = (token) => {
     try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        return decoded;
+        return jwt.verify(token, process.env.JWT_SECRET);
     } catch (error) {
         throw new Error('Invalid token');
     }
 };
-
-export { generateAuthToken, verifyToken };

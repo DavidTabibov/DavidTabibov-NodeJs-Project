@@ -29,6 +29,13 @@ A RESTful API for managing business cards and users with authentication, authori
 - Git
 
 ### Installation
+
+1. Clone the repository:
+```bash
+git clone <your-repo-url>
+cd cardsserver
+```
+
 2. Install dependencies:
 ```bash
 npm install

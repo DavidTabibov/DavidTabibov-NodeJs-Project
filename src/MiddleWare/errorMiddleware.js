@@ -1,14 +1,18 @@
+import { fileURLToPath } from 'url';
+import { dirname, join } from 'path';
 import { existsSync, mkdirSync, appendFileSync } from 'fs';
-import { join } from 'path';
 
-// Create error logger
+// הגדרת __dirname עבור מודולי ES
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const logError = (error, req) => {
     if (error.statusCode >= 400) {
         const logsDir = join(__dirname, '..', 'Logs');
         const currentDate = new Date().toISOString().split('T')[0];
         const logFilePath = join(logsDir, `${currentDate}.log`);
 
-        // Create logs directory if it doesn't exist
+        // יצירת תיקיית לוגים אם אינה קיימת
         if (!existsSync(logsDir)) {
             mkdirSync(logsDir, { recursive: true });
         }
@@ -19,7 +23,6 @@ const logError = (error, req) => {
             method: req.method,
             url: req.originalUrl,
             message: error.message,
-            // Additional helpful info
             details: {
                 body: req.body,
                 params: req.params,
@@ -27,17 +30,14 @@ const logError = (error, req) => {
                 userId: req.user?._id
             }
         };
-        // Security: Remove sensitive data
+
+        // סינון נתונים רגישים
         if (logEntry.details.body?.password) {
             logEntry.details.body.password = '[FILTERED]';
         }
 
         try {
-            appendFileSync(
-                logFilePath,
-                JSON.stringify(logEntry) + '\n',
-                'utf8'
-            );
+            appendFileSync(logFilePath, JSON.stringify(logEntry) + '\n', 'utf8');
 
             if (process.env.NODE_ENV === 'development') {
                 console.error('\x1b[31m%s\x1b[0m', 'Error:', {
@@ -51,21 +51,16 @@ const logError = (error, req) => {
         }
     }
 };
+
 const errorHandler = (err, req, res, next) => {
-    // Set status code
     const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
     res.status(statusCode);
-
-    // Log error
     err.statusCode = statusCode;
     logError(err, req);
-
-    // Send error response
     res.json({
         status: 'error',
         message: err.message,
         ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
-        // Add request ID or correlation ID if you implement it later
         requestId: req.id
     });
 };

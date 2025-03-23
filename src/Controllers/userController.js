@@ -1,32 +1,19 @@
-import { find, findById, findByIdAndUpdate, findByIdAndDelete } from '../Schemas/userSchema';
-import { validateUser } from '../';
+import User from '../Schemas/userSchema.js';
+import { validateUser } from '../Utils/validators/userValidators.js';
 
 // Get all users (admin only)
-const getAllUsers = async (req, res) => {
+export const getAllUsers = async (req, res) => {
     try {
         const users = await User.find().select('-password').lean();
+        if (!users.length) return res.status(404).json({ message: "No users found" });
 
         const formattedUsers = users.map(user => ({
             _id: user._id,
-            name: {
-                first: user.name.first,
-                middle: user.name.middle,
-                last: user.name.last
-            },
+            name: user.name,
             phone: user.phone,
             email: user.email,
-            image: {
-                url: user.image.url,
-                alt: user.image.alt
-            },
-            address: {
-                state: user.address.state,
-                country: user.address.country,
-                city: user.address.city,
-                street: user.address.street,
-                houseNumber: user.address.houseNumber,
-                zip: user.address.zip
-            },
+            image: user.image,
+            address: user.address,
             isBusiness: user.isBusiness,
             isAdmin: user.isAdmin,
             createdAt: user.createdAt,
@@ -40,31 +27,21 @@ const getAllUsers = async (req, res) => {
 };
 
 // Get user by ID
-const getUserById = async (req, res) => {
+export const getUserById = async (req, res) => {
     try {
-        const user = await findById(req.params.id).select('-password');
-        if (!user) {
-            return res.status(404).json({
-                error: 'User not found'
-            });
-        }
+        const user = await User.findById(req.params.id).select('-password');
+        if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
     } catch (error) {
-        res.status(500).json({
-            error: 'Internal Server Error',
-            message: error.message
-        });
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 };
 
-// Update user
-const updateUser = async (req, res) => {
+// Update user (only self or admin)
+export const updateUser = async (req, res) => {
     try {
-        // Verify user can only update their own profile
-        if (req.params.id !== req.user._id.toString()) {
-            return res.status(403).json({
-                error: 'Access denied - You can only update your own profile'
-            });
+        if (req.params.id !== req.user._id.toString() && !req.user.isAdmin) {
+            return res.status(403).json({ error: 'Access denied - You can only update your own profile' });
         }
 
         const { error } = validateUser(req.body);
@@ -78,60 +55,38 @@ const updateUser = async (req, res) => {
 
         if (!updatedUser) return res.status(404).json({ error: 'User not found' });
 
-        return res.status(200).json(updatedUser);
+        res.status(200).json(updatedUser);
     } catch (error) {
-        return res.status(500).json({ error: error.message });
+        res.status(500).json({ error: error.message });
     }
 };
 
 // Change business status
-const changeBusinessStatus = async (req, res) => {
+export const changeBusinessStatus = async (req, res) => {
     try {
-        const user = await findByIdAndUpdate(
+        const user = await User.findByIdAndUpdate(
             req.params.id,
             { isBusiness: req.body.isBusiness },
             { new: true }
         ).select('-password');
 
-        if (!user) {
-            return res.status(404).json({
-                error: 'User not found'
-            });
-        }
-
+        if (!user) return res.status(404).json({ error: 'User not found' });
         res.json(user);
     } catch (error) {
-        res.status(500).json({
-            error: 'Internal Server Error',
-            message: error.message
-        });
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 };
 
 // Delete user
-const deleteUser = async (req, res) => {
+export const deleteUser = async (req, res) => {
     try {
-        const user = await findByIdAndDelete(req.params.id);
-        if (!user) {
-            return res.status(404).json({
-                error: 'User not found'
-            });
-        }
-        res.json({
-            message: 'User deleted successfully'
-        });
+        const user = await User.findByIdAndDelete(req.params.id);
+        if (!user) return res.status(404).json({ error: 'User not found' });
+        res.json({ message: 'User deleted successfully' });
     } catch (error) {
-        res.status(500).json({
-            error: 'Internal Server Error',
-            message: error.message
-        });
+        res.status(500).json({ error: 'Internal Server Error', message: error.message });
     }
 };
 
-export default {
-    getAllUsers,
-    getUserById,
-    updateUser,
-    changeBusinessStatus,
-    deleteUser
-};
+// הוספת default export
+export default { getAllUsers, getUserById, updateUser, changeBusinessStatus, deleteUser };

@@ -1,7 +1,8 @@
 import Card from '../Schemas/cardSchema.js';
-import { formatCardResponse, validateUpdate } from './cardUtils.js';
+import { formatCardResponse, validateUpdate } from '../Utils/cardUtils.js';
 
-const updateCard = async (req, res) => {
+// Update card (only owner or admin)
+export const updateCard = async (req, res) => {
     try {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).json({ error: 'Card not found' });
@@ -10,7 +11,7 @@ const updateCard = async (req, res) => {
         }
 
         const { error, allowedFields } = validateUpdate(req.body);
-        if (error) return res.status(400).json(error);
+        if (error) return res.status(400).json({ error });
 
         const updatedCard = await Card.findByIdAndUpdate(req.params.id, allowedFields, { new: true });
         res.json(formatCardResponse(updatedCard));
@@ -19,16 +20,17 @@ const updateCard = async (req, res) => {
     }
 };
 
-const toggleLikeCard = async (req, res) => {
+// Toggle like/unlike card
+export const toggleLikeCard = async (req, res) => {
     try {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).json({ error: 'Card not found' });
 
-        const likeIndex = card.likes.indexOf(req.user._id);
-        if (likeIndex === -1) {
+        const userLikeIndex = card.likes.indexOf(req.user._id);
+        if (userLikeIndex === -1) {
             card.likes.push(req.user._id);
         } else {
-            card.likes.splice(likeIndex, 1);
+            card.likes.splice(userLikeIndex, 1);
         }
 
         await card.save();
@@ -38,7 +40,8 @@ const toggleLikeCard = async (req, res) => {
     }
 };
 
-const deleteCard = async (req, res) => {
+// Delete card (only owner or admin)
+export const deleteCard = async (req, res) => {
     try {
         const card = await Card.findById(req.params.id);
         if (!card) return res.status(404).json({ error: 'Card not found' });
@@ -52,5 +55,3 @@ const deleteCard = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
-
-export { updateCard, toggleLikeCard, deleteCard };
